@@ -1,7 +1,8 @@
 package com.igniteplus.data.pipeline.service
 
 
-import com.igniteplus.data.pipeline.exception.EmptyFileException
+
+import com.igniteplus.data.pipeline.exception.ExceptionHandler.EmptyFileException
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import com.igniteplus.data.pipeline.util.ApplicationUtil.createSparkSession
 

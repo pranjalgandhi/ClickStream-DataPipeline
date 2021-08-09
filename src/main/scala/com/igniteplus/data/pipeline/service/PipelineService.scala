@@ -13,7 +13,7 @@ object PipelineService {
     val dfItemData = readFile(ITEM_DATASET,FILE_FORMAT)
     dfItemData.printSchema()
 
-//    val df = readFile("data/input02/clickstream/empty11.csv",FILE_FORMAT)
+//    val df = readFile("data/input02/clickstream/empty12.csv",FILE_FORMAT)
 
     val dfViewLog = readFile(CLICKSTREAM_DATASET,FILE_FORMAT)
     dfViewLog.printSchema()
