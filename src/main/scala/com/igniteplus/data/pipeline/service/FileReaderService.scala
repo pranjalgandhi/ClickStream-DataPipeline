@@ -1,17 +1,21 @@
 package com.igniteplus.data.pipeline.service
 
 
+import com.igniteplus.data.pipeline.exception.EmptyFileException
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import com.igniteplus.data.pipeline.util.ApplicationUtil.createSparkSession
 
 object FileReaderService {
 
   def readFile(path:String,fileFormat:String)( implicit spark :SparkSession) : DataFrame ={
-    val dfViewData: DataFrame = spark.read.format(fileFormat)
+    val df: DataFrame = spark.read.format(fileFormat)
       .option("header", "true")
       .option("inferSchema", "true")
       .load(path)
-    dfViewData
+    if(df.count==0){
+      throw new EmptyFileException("The file is empty")
+    }
+    df
   }
 
 

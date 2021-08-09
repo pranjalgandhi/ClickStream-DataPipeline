@@ -1,15 +1,32 @@
 package com.igniteplus.data.pipeline
 
 import com.igniteplus.data.pipeline.constants.ApplicationConstants.{APP_NAME, MASTER}
+import com.igniteplus.data.pipeline.exception.EmptyFileException
 import com.igniteplus.data.pipeline.service.PipelineService
 import com.igniteplus.data.pipeline.util.ApplicationUtil
 import org.apache.spark.sql.SparkSession
 
+import java.io.FileNotFoundException
 
-object ProductName {
+
+object ClickStreamDataPipeline {
   def main(args: Array[String]): Unit = {
     implicit val spark: SparkSession = ApplicationUtil.createSparkSession(APP_NAME,MASTER)
-    PipelineService.execute()
+    try {
+      PipelineService.execute()
+    }
+    catch{
+      case e: FileNotFoundException => {
+        println("File not found in the given location")
+      }
+      case e: EmptyFileException => {
+        println("Got an exception", e)
+      }
+      case _: Exception => {
+        println("Got some other kind of exception")
+      }
+    }
+
 
 //    val dfItemData = readFile(ITEM_DATASET)(spark = createSparkSession("product","local"))
 //    println(dfItemData.count())
