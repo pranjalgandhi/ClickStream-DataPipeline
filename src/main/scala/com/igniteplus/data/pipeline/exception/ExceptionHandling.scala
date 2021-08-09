@@ -4,5 +4,3 @@ class ExceptionHandling(message: String, cause: Throwable) extends Exception(mes
   def this(message: String) = this(message, None.orNull)
 }
 case class EmptyFileException(message: String) extends ExceptionHandling(message)
-
-case class FileNotFoundException(message: String) extends ExceptionHandling(message)
