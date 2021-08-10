@@ -1,12 +1,12 @@
 package com.igniteplus.data.pipeline
 
 import com.igniteplus.data.pipeline.constants.ApplicationConstants.{APP_NAME, MASTER}
-import com.igniteplus.data.pipeline.exception.ExceptionHandler.EmptyFileException
+import com.igniteplus.data.pipeline.exception.ExceptionHandler.{EmptyFileException, FileNotFoundException}
 import com.igniteplus.data.pipeline.service.PipelineService
 import com.igniteplus.data.pipeline.util.ApplicationUtil
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.AnalysisException
 
-import java.io.FileNotFoundException
 
 
 object ClickStreamDataPipeline {
@@ -17,7 +17,7 @@ object ClickStreamDataPipeline {
     }
     catch{
       case e: FileNotFoundException => {
-        println("File not found in the given location")
+        println("File not found in the given location",e)
       }
       case e: EmptyFileException => {
         println("Got an exception", e)

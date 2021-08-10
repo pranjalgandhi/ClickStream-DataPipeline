@@ -5,7 +5,7 @@ object ApplicationConstants {
   val APP_NAME:String ="Clickstream Pipeline"
 
   //DATASET
-  val CLICKSTREAM_DATASET:String = "data/input02/clickstream/view_log.csv"
+  val CLICKSTREAM_DATASET:String = "data/input02/clickstream/clickstream_log.csv"
   val ITEM_DATASET:String = "data/input02/item/item_data.csv"
 
   val COLS_OF_CLICKSTREAM: Seq[String] = Seq("event_timestamp","device_type","session_id","visitor_id","item_id","redirection_source")

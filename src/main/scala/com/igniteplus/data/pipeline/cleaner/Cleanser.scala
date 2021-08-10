@@ -12,18 +12,40 @@ import org.apache.spark.sql.functions.{col, desc, lower, row_number, trim, unix_
 object Cleanser {
 
 
-  def FilterNullRow(df:DataFrame, columnList: Seq[String],path:String): DataFrame = {
+//  def FilterNullRow(df:DataFrame, columnList: Seq[String],path:String): Unit = {
+//
+//    val columnNames:Seq[Column] = columnList.map(ex => col(ex))
+//    val condition:Column = columnNames.map(ex => ex.isNull).reduce(_||_)
+//    val dfCheckNullKeyRows:DataFrame = df.withColumn("nullFlag" , when(condition,value = "true").otherwise(value = "false"))
+//
+//    val  dataSetNull : DataFrame = dfCheckNullKeyRows.filter(dfCheckNullKeyRows("nullFlag")==="true")
+//
+//    if (dataSetNull.count() > 0)
+//      writeFile(dataSetNull,path ,FILE_FORMAT)
+//
+//  }
 
-    val columnNames:Seq[Column] = columnList.map(ex => col(ex))
-    val condition:Column = columnNames.map(ex => ex.isNull).reduce(_||_)
-    val dfCheckNullKeyRows:DataFrame = df.withColumn("nullFlag" , when(condition,value = "true").otherwise(value = "false"))
-
-    val  dataSetNull : DataFrame = dfCheckNullKeyRows.filter(dfCheckNullKeyRows("nullFlag")==="true")
-
-    if (dataSetNull.count() > 0)
-      writeFile(dataSetNull,path ,FILE_FORMAT)
-    dataSetNull
+  def FilterNullRow(df : DataFrame, primaryColumns : Seq[String], filePath : String) : DataFrame = {
+    var nullDf : DataFrame = df
+    var notNullDf : DataFrame = df
+    for( i <- primaryColumns)
+    {
+      nullDf = df.filter(df(i).isNull)
+      notNullDf = df.filter(df(i).isNotNull)
+    }
+    if(nullDf.count() > 0)
+      writeFile(nullDf, filePath, FILE_FORMAT)
+    notNullDf
   }
+//    //separate null rows
+//    def FilterNullRow(dataset:DataFrame,
+//                     columnList: Seq[String],path:String):Unit ={
+//        var dataSetNull = dataset
+//        for (n <- columnList)  dataSetNull = dataSetNull.filter(dataset(n).isNull)
+//        if (dataSetNull.count() > 0)
+//          writeFile(dataSetNull,path ,FILE_FORMAT)
+//
+//    }
 
 
   //separate not null
@@ -62,15 +84,7 @@ object Cleanser {
   }
 
 
-  //  //separate null rows
-  //  def separateNull(dataset:DataFrame,
-  //                   columnList: Seq[String],path:String):Unit ={
-  //    var dataSetNull = dataset
-  //    for (n <- columnList)  dataSetNull = dataSetNull.filter(col(n).isNull)
-  //    if (dataSetNull.count() > 0)
-  //      writeFile(dataSetNull,path ,FILE_FORMAT)
-  //
-  //  }
+
 
 
 
