@@ -1,11 +1,10 @@
 package com.igniteplus.data.pipeline
 
 import com.igniteplus.data.pipeline.constants.ApplicationConstants.{APP_NAME, MASTER}
-import com.igniteplus.data.pipeline.exception.ExceptionHandler.{EmptyFileException, FileNotFoundException}
+import com.igniteplus.data.pipeline.exception.ExceptionHandler.{DqDuplicateCheckFail, DqNullCheckFail, EmptyFileException, FileNotFoundException}
 import com.igniteplus.data.pipeline.service.PipelineService
 import com.igniteplus.data.pipeline.util.ApplicationUtil
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.AnalysisException
 
 
 
@@ -22,9 +21,18 @@ object ClickStreamDataPipeline {
       case e: EmptyFileException => {
         println("Got an exception", e)
       }
+      case e:DqNullCheckFail => {
+        println("DQ check failed",e)
+      }
+      case e:DqDuplicateCheckFail => {
+        println("DQ check failed",e)
+      }
       case _: Exception => {
         println("Got some other kind of exception")
       }
+
+
+
     }
 
 

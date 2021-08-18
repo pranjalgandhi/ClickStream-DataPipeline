@@ -4,7 +4,6 @@ package com.igniteplus.data.pipeline.cleaner
 import com.igniteplus.data.pipeline.constants.ApplicationConstants.FILE_FORMAT
 import com.igniteplus.data.pipeline.service.FileWriterService.writeFile
 import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.catalyst.expressions.SizeBasedWindowFunction.n
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{col, desc, lower, row_number, trim, unix_timestamp, when}
 
@@ -12,55 +11,31 @@ import org.apache.spark.sql.functions.{col, desc, lower, row_number, trim, unix_
 object Cleanser {
 
 
-//  def FilterNullRow(df:DataFrame, columnList: Seq[String],path:String): Unit = {
-//
-//    val columnNames:Seq[Column] = columnList.map(ex => col(ex))
-//    val condition:Column = columnNames.map(ex => ex.isNull).reduce(_||_)
-//    val dfCheckNullKeyRows:DataFrame = df.withColumn("nullFlag" , when(condition,value = "true").otherwise(value = "false"))
-//
-//    val  dataSetNull : DataFrame = dfCheckNullKeyRows.filter(dfCheckNullKeyRows("nullFlag")==="true")
-//
-//    if (dataSetNull.count() > 0)
-//      writeFile(dataSetNull,path ,FILE_FORMAT)
-//
-//  }
 
-  def FilterNullRow(df : DataFrame, primaryColumns : Seq[String], filePath : String) : DataFrame = {
-    var nullDf : DataFrame = df
-    var notNullDf : DataFrame = df
-    for( i <- primaryColumns)
-    {
-      nullDf = df.filter(df(i).isNull)
-      notNullDf = df.filter(df(i).isNotNull)
-    }
-    if(nullDf.count() > 0)
-      writeFile(nullDf, filePath, FILE_FORMAT)
-    notNullDf
+  def checkNFilterNullRow(df:DataFrame, primaryKeyList: Seq[String], pathForNull:String): DataFrame = {
+
+    val columnNames:Seq[Column] = primaryKeyList.map(ex => col(ex))
+    val condition:Column = columnNames.map(ex => ex.isNull).reduce(_||_)
+    val dfCheckNullKeyRows:DataFrame = df.withColumn("nullFlag" , when(condition,value = "true").otherwise(value = "false"))
+
+    val  dfNullRows:DataFrame = dfCheckNullKeyRows.filter(dfCheckNullKeyRows("nullFlag")==="true")
+    val  dfNotNullRows:DataFrame = dfCheckNullKeyRows.filter(dfCheckNullKeyRows("nullFlag")==="false").drop("nullFlag")
+
+        if (dfNullRows.count() > 0) {
+          writeFile(dfNullRows, pathForNull, FILE_FORMAT)
+        }
+
+    dfNotNullRows
   }
-//    //separate null rows
-//    def FilterNullRow(dataset:DataFrame,
-//                     columnList: Seq[String],path:String):Unit ={
-//        var dataSetNull = dataset
-//        for (n <- columnList)  dataSetNull = dataSetNull.filter(dataset(n).isNull)
-//        if (dataSetNull.count() > 0)
-//          writeFile(dataSetNull,path ,FILE_FORMAT)
-//
-//    }
 
-
-  //separate not null
-  def separateNotNull(dataset:DataFrame,
-                      columnList: Seq[String]):DataFrame={
-    val datasetNotNull:DataFrame= dataset.na.drop(columnList)
-    datasetNotNull
-  }
 
 
   //convert to lowercase
-  def convertToLowerCase(df:DataFrame,colName:Seq[String]):DataFrame = {
-    var dfConvertToLowerCase = df
-    for(n<-colName) dfConvertToLowerCase = df.withColumn(n, lower(col(n)))
-    dfConvertToLowerCase
+
+  def convertToLowerCase(df:DataFrame,columnNames:Seq[String]):DataFrame = {
+    var dfConvertedToLowerCase = df
+    for(n<-columnNames) dfConvertedToLowerCase = df.withColumn(n, lower(col(n)))
+    dfConvertedToLowerCase
   }
 
 
@@ -77,14 +52,11 @@ object Cleanser {
   }
 
 
-  def trimColumn(df:DataFrame,column:Seq[String]):DataFrame = {
+  def trimColumn(df:DataFrame): DataFrame = {
     var trimmedDF: DataFrame = df
-    for(n<-column) trimmedDF = df.withColumn(n, trim(col(n)))
+    for(n<-df.columns) trimmedDF = df.withColumn(n,trim(col(n)))
     trimmedDF
   }
-
-
-
 
 
 
@@ -121,5 +93,40 @@ object Cleanser {
   //    }
   //    dataModified
   //  }
+
+  //  def FilterNullRow(df : DataFrame, primaryColumns : Seq[String], filePath : String) : DataFrame = {
+  //    var nullDf : DataFrame = df
+  //    var notNullDf : DataFrame = df
+  //    for( i <- primaryColumns)
+  //    {
+  //      nullDf = df.filter(df(i).isNull)
+  //      notNullDf = df.filter(df(i).isNotNull)
+  //    }
+  //    if(nullDf.count() > 0)
+  //      writeFile(nullDf, filePath, FILE_FORMAT)
+  //    notNullDf
+  //  }
+  //
+  //
+  //  //separate not null
+  //  def separateNotNull(dataset:DataFrame,
+  //                      columnList: Seq[String]):DataFrame={
+  //    val datasetNotNull:DataFrame= dataset.na.drop(columnList)
+  //    datasetNotNull
+  //  }
+
+  //  def FilterNullRow(df:DataFrame, columnList: Seq[String],path:String): Unit = {
+  //
+  //    val columnNames:Seq[Column] = columnList.map(ex => col(ex))
+  //    val condition:Column = columnNames.map(ex => ex.isNull).reduce(_||_)
+  //    val dfCheckNullKeyRows:DataFrame = df.withColumn("nullFlag" , when(condition,value = "true").otherwise(value = "false"))
+  //
+  //    val  dataSetNull : DataFrame = dfCheckNullKeyRows.filter(dfCheckNullKeyRows("nullFlag")==="true")
+  //
+  //    if (dataSetNull.count() > 0)
+  //      writeFile(dataSetNull,path ,FILE_FORMAT)
+  //
+  //  }
+
 }
 
