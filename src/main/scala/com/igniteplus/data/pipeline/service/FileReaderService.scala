@@ -1,26 +1,47 @@
 package com.igniteplus.data.pipeline.service
-import java.nio.file.{Files, Paths}
-import com.igniteplus.data.pipeline.exception.ExceptionHandler.{EmptyFileException, FileNotFoundException}
+
+import com.igniteplus.data.pipeline.exception.FileReadException
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import com.igniteplus.data.pipeline.util.ApplicationUtil.createSparkSession
 
 object FileReaderService {
+  /**
+   * Reads the contents of the file
 
-  def readFile(path:String,fileFormat:String)( implicit spark :SparkSession) : DataFrame ={
-    if(Files.exists(Paths.get(path))==false){
-      throw new FileNotFoundException("The path is invalid")
-    }
+   * @param inputPath specifies the path from where the data is to read
 
-    val df: DataFrame = spark.read.format(fileFormat)
-      .option("header", "true")
-      .option("inferSchema", "true")
-      .load(path)
+   * @param inputPath specifies the inputPath from where the data is to read
 
-    if(df.count==0){
-      throw new EmptyFileException("The file is empty")
-    }
-    df
+   * @param fileFormat specifies the format of the file
+   * @param spark
+   * @return the contents read from the file
+   */
+    def readFile(inputPath:String,
+                 fileFormat:String)
+                (implicit spark:SparkSession): DataFrame = {
+
+        val dfReadData: DataFrame =
+          try {
+            spark.read
+              .option("header","true")
+              .format(fileFormat)
+              .load(inputPath)
+          }
+          catch {
+            case e: Exception =>
+              FileReadException("Unable to read file from the given location " + inputPath)
+              spark.emptyDataFrame
+
+          }
+
+        val dfDataCount: Long = dfReadData.count()
+
+        if(dfDataCount == 0) {
+
+          throw FileReadException("The input file is empty " + inputPath)
+
+        }
+
+        dfReadData
   }
-
 
 }

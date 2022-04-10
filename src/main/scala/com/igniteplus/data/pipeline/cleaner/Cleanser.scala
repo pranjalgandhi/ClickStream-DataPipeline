@@ -12,7 +12,7 @@ object Cleanser {
 
 
 
-  def checkNFilterNullRow(df:DataFrame, primaryKeyList: Seq[String], pathForNull:String): DataFrame = {
+  def checkNFilterNullRow(df:DataFrame, primaryKeyList: Seq[String]): DataFrame = {
 
     val columnNames:Seq[Column] = primaryKeyList.map(ex => col(ex))
     val condition:Column = columnNames.map(ex => ex.isNull).reduce(_||_)
@@ -22,7 +22,8 @@ object Cleanser {
     val  dfNotNullRows:DataFrame = dfCheckNullKeyRows.filter(dfCheckNullKeyRows("nullFlag")==="false").drop("nullFlag")
 
         if (dfNullRows.count() > 0) {
-          writeFile(dfNullRows, pathForNull, FILE_FORMAT)
+          dfNullRows.show()
+//          writeFile(dfNullRows, pathForNull, FILE_FORMAT)
         }
 
     dfNotNullRows
