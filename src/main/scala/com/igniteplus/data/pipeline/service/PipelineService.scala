@@ -1,64 +1,57 @@
 package com.igniteplus.data.pipeline.service
 
-import com.igniteplus.data.pipeline.constants.ApplicationConstants.{CLICKSTREAM_DATASET, CLICKSTREAM_DATASET_NULL, COLS_OF_CLICKSTREAM, COLS_OF_ITEMDATA, COL_NAME_DATATYPE_DF1, COL_NAME_LOWERCASE_DF1, DATATYPE_DF1, EVENT_TIMESTAMP, FILE_FORMAT, ITEM_DATASET, ITEM_DATASET_NULL, NULLKEY_CLICKSTREAM, NULLKEY_ITEM, REDIRECTION_SOURCE}
-import com.igniteplus.data.pipeline.util.ApplicationUtil
+import com.igniteplus.data.pipeline.cleanse.Cleanser.{dataTypeValidation, filterRemoveNull, removeDuplicates, toLowerCase, trimColumn}
+import com.igniteplus.data.pipeline.constants.ApplicationConstants._
+import com.igniteplus.data.pipeline.service.DbService.sqlWrite
 import com.igniteplus.data.pipeline.service.FileReaderService.readFile
-import com.igniteplus.data.pipeline.service.FileWriterService.writeFile
-import com.igniteplus.data.pipeline.cleaner.Cleanser.{checkNFilterNullRow, convertToLowerCase, dataTypeValidation, removeDuplicates, trimColumn}
-import com.igniteplus.data.pipeline.dqchecks.DqCheckMethods.{DqDuplicateCheck, DqNullCheck}
-import org.apache.spark.sql.SparkSession
+import com.igniteplus.data.pipeline.transform.JoinTransformation
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.internal.Logging
 
-object PipelineService {
+object PipelineService extends Logging {
 
-  def execute()(implicit spark: SparkSession):Unit = {
-    val dfItemData = readFile(ITEM_DATASET,FILE_FORMAT)
-    dfItemData.printSchema()
+  def executePipeline() (implicit spark:SparkSession) : Unit = {
 
-//    val df = readFile("data/input02/clickstream/empty12.csv",FILE_FORMAT)
+    /*************** READING OF CLICK-STREAM DATA *******************************************************/
+    val clickStreamDataDf: DataFrame = readFile(CLICKSTREAM_DATASET, READ_FORMAT).drop("id")
+    logInfo("Clickstream data read from input location complete.")
 
-    val dfViewLog = readFile(CLICKSTREAM_DATASET,FILE_FORMAT)
-    dfViewLog.printSchema()
+    /**************** READING OF ITEM DATA *************************************************************/
+    val itemDataDf: DataFrame = readFile(ITEM_DATASET, READ_FORMAT)
+    logInfo("Item data read from input location complete.")
 
-    val dfViewLogDataTypeValidated = dataTypeValidation(dfViewLog,COL_NAME_DATATYPE_DF1,DATATYPE_DF1)
-    dfViewLogDataTypeValidated.printSchema()
+    /************************** CHANGE DATATYPE *****************************************************/
+    val changedDatatypeClickStreamDataDf:DataFrame = dataTypeValidation(clickStreamDataDf, COLUMNS_VALID_DATATYPE_CLICKSTREAM,NEW_DATATYPE_CLICKSTREAM)
+    val changedDatatype:DataFrame = dataTypeValidation(itemDataDf, COLUMNS_VALID_DATATYPE_ITEM, NEW_DATATYPE_ITEM)
+    logInfo("Data type validation and conversion complete.")
 
-    val dfViewLogTrimmed = trimColumn(dfViewLogDataTypeValidated)
-    val dfItemDataTrimmed = trimColumn(dfItemData)
+    /************************** TRIM COLUMNS ********************************************************/
+    val trimmedClickStreamDataDf:DataFrame= trimColumn(changedDatatypeClickStreamDataDf)
+    val trimmedItemDf:DataFrame = trimColumn(changedDatatype)
+    logInfo("Data columns trim complete.")
 
-    val dfViewLogNotNull = checkNFilterNullRow(dfViewLogTrimmed,NULLKEY_CLICKSTREAM,CLICKSTREAM_DATASET_NULL)
-    val dfItemDataNotNull = checkNFilterNullRow(dfItemDataTrimmed,NULLKEY_ITEM,ITEM_DATASET_NULL)
+    /***************** NULL VALUE CHECKING ************************************************************/
+    val nullValueCheckClickStreamDataDf: DataFrame = filterRemoveNull(trimmedClickStreamDataDf, NULL_CHECK_CLICLSTREAM, CLICKSTREAM_NULL_ROWS_DATASET_PATH, WRITE_FORMAT)
+    val nullValueCheckItemDf: DataFrame = filterRemoveNull(trimmedItemDf, COLUMNS_PRIMARY_KEY_ITEM, ITEM_NULL_ROWS_DATASET_PATH, WRITE_FORMAT)
+    logInfo("Filtering and removing null records from data complete.")
 
-    val dfViewRemovedDuplicates = removeDuplicates(dfViewLogNotNull,NULLKEY_CLICKSTREAM,EVENT_TIMESTAMP)
-    val dfItemRemovedDuplicates = removeDuplicates(dfItemDataNotNull,NULLKEY_ITEM)
+    /**************************** DEDUPLICAION *******************************************************************/
+    val dedupliactedClickStreamDataDf:DataFrame = removeDuplicates(nullValueCheckClickStreamDataDf,COLUMNS_PRIMARY_KEY_CLICKSTREAM,Some(EVENT_TIMESTAMP_OPTION))
+    val deduplicatedItemDf:DataFrame = removeDuplicates(nullValueCheckItemDf,COLUMNS_PRIMARY_KEY_ITEM,None)
+    logInfo("Data de-duplication complete.")
 
-    val dfViewLogLower = convertToLowerCase(dfViewRemovedDuplicates,COL_NAME_LOWERCASE_DF1)
+    /*************************** CHANGE TO LOWER CASE ***************************************************************/
+    val lowerCaseClickStreamDataDf: DataFrame = toLowerCase(dedupliactedClickStreamDataDf,COLUMNS_LOWERCASE_CLICKSTREAM)
+    val lowerCaseItemDf: DataFrame = toLowerCase(deduplicatedItemDf,COLUMNS_LOWERCASE_ITEM)
+    logInfo("Specified data columns conversion to lower case complete.")
 
-    DqNullCheck(dfItemRemovedDuplicates,NULLKEY_ITEM)
-    DqNullCheck(dfViewLogLower,NULLKEY_CLICKSTREAM)
+    /*********************************** JOIN ***********************************************************************/
+    val jointDf: DataFrame = JoinTransformation.joinTable(lowerCaseClickStreamDataDf, lowerCaseItemDf, JOIN_KEY, JOIN_TYPE_NAME)
+    logInfo("Clickstream and Item data join complete.")
 
-    DqDuplicateCheck(dfItemRemovedDuplicates,NULLKEY_ITEM)
-    DqDuplicateCheck(dfViewLogLower,NULLKEY_CLICKSTREAM,EVENT_TIMESTAMP)
-
-//
-//    val dfViewRemovedDuplicates = removeDuplicates(dfViewLog,NULLKEY_CLICKSTREAM,EVENT_TIMESTAMP)
-//    //    println(dfViewRemovedDuplicates.count())
-//    dfViewRemovedDuplicates.show(false)
-////    val dfItemRemovedDuplicates = removeDuplicates(dfItemDataNotNull,NULLKEY_ITEM)
-////    //    println(dfItemRemovedDuplicates.count())
-//
-//    val dfLower = convertToLowerCase(dfViewRemovedDuplicates,COL_NAME_LOWERCASE_DF1)
-//dfLower.show(false)
-//    val dfViewLogDtaTypeValidated = dataTypeValidation(dfLower,COL_NAME_DATATYPE_DF1,DATATYPE_DF1)
-//     dfViewLogDtaTypeValidated.show(false)
-//    //    dfViewLog.printSchema()
-//    //    writeFile(dfViewLog.filter(dfViewLog("device_type") === "web"),"data/input02/item/item.csv","csv"
-
-
-
-
-
-
+    /*********************************** WRITING TO STAGING TABLE***********************************************************************/
+    sqlWrite(jointDf,TABLE_NAME,SQL_URL_STAGING)
+    logInfo("Transformed data write to staging table complete.")
 
   }
-
 }

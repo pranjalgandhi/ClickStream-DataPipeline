@@ -1,8 +1,6 @@
-name := "Target-Product"
-
-version := "1.0.0"
-
+name := "Clickstream Data-Pipeline"
 scalaVersion := "2.11.8"
+version := "1.0.0"
 val sparkVersion = "2.3.2"
 val jacksonCore = "2.6.7"
 val scope = "compile"
@@ -15,7 +13,6 @@ libraryDependencies ++= Seq(
   // ex :"org.apache.spark" %% "spark-core" % sparkVersion % provided,
   "org.apache.spark" %% "spark-core" % sparkVersion % scope,
   "org.apache.spark" %% "spark-sql" % sparkVersion % scope,
-
   "org.apache.spark" %% "spark-hive" % sparkVersion % scope,
   "org.scala-lang" % "scala-library" % scalaVersion.value,
   "com.fasterxml.jackson.core" % "jackson-core" % jacksonCore % scope,
